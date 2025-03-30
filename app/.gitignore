@@ -1,0 +1,10 @@
+# Dependencias y entornos virtuales
+.venv/
+__pycache__/
+
+# Archivos de configuración y logs
+.env
+*.log
+
+# Archivos de Docker que no necesitas en Git
+docker-compose.override.yml
