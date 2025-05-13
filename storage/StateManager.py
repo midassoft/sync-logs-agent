@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 class StateManager:
     def __init__(self, storage):
         self.storage = storage
@@ -54,6 +55,18 @@ class StateManager:
         """
         self.state['pending_batches'].append(batch)
         self.save()
+
+    def increment_batch_retry(self, batch_id):
+        """
+        Incrementa el contador de reintentos para un batch específico y guarda el estado.
+        Devuelve el nuevo contador de reintentos, o -1 si el batch no se encuentra.
+        """
+        for batch_in_state in self.state.get('pending_batches', []):
+            if batch_in_state.get('id') == batch_id:
+                batch_in_state['retry_count'] = batch_in_state.get('retry_count', 0) + 1
+                self.save()
+                return batch_in_state['retry_count']
+        return -1
 
     def remove_pending_batch(self, batch_id):
         self.state['pending_batches'] = [

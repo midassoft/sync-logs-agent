@@ -3,6 +3,7 @@
 import time
 import json
 import sys
+import logging
 from hashlib import md5
 from agents.BaseAgent import BaseAgent
 from storage.StateManager import StateManager
@@ -10,6 +11,8 @@ from storage.FileStateStorage import FileStateStorage
 from readers.FileLogReader import FileLogReader
 from clients.JSONAPIClient import JSONAPIClient
 from clients.auth.ApiKeyAuth import ApiKeyAuth
+
+logger = logging.getLogger(__name__)
 
 class LogAgent(BaseAgent):
     def __init__(self, config):
@@ -27,7 +30,6 @@ class LogAgent(BaseAgent):
             endpoint=config['api_url'],
             auth_handler=ApiKeyAuth(config['api_token'])
         )
-        
 
         # Inicial configuration
         self.batch_interval = config.get('batch_interval', 0.5)
@@ -35,8 +37,21 @@ class LogAgent(BaseAgent):
         self.retry_delay = config.get('retry_delay', 5)
 
     def initialize(self):
-        if self.state_manager.state['last_position']:
-            self.log_reader._position = self.state_manager.state['last_position']
+        logger.info("LogAgent: Inicializando...")
+        # Cargar last_position del estado, usando .get() para seguridad
+        last_pos_from_state = self.state_manager.state.get('last_position')
+
+        if last_pos_from_state is not None and last_pos_from_state > 0: # Considerar 0 como no válido o inicio
+            logger.info("LogAgent: Se encontró last_position %s en el estado. Aplicando al lector.", last_pos_from_state)
+            self.log_reader.set_initial_position(last_pos_from_state)
+        else:
+            logger.info("LogAgent: No se encontró last_position válida en el estado. Posicionando lector al final del archivo de log.")
+            # Mover al final del archivo y obtener esa posición
+            end_position = self.log_reader.seek_to_end_and_get_position()
+            # Actualizar el estado inmediatamente con esta nueva posición final.
+            # Así, si el agente se detiene antes de procesar nada, ya sabe dónde empezar.
+            self.state_manager.update_position(end_position)
+            logger.info("LogAgent: Estado actualizado con la posición final del log: %s", end_position)
     
     def execute(self):
         # 1. Process batches
@@ -59,15 +74,30 @@ class LogAgent(BaseAgent):
             self.state_manager.update_position(self.log_reader._position)
     
     def _process_pending_batches(self):
-        for batch in list(self.state_manager.state['pending_batches']):
-            if self._send_batch(batch['data']):
-                self.state_manager.remove_pending_batch(batch['id'])
+        # Iterar sobre una copia para poder modificar la original de forma segura
+        for batch_info in list(self.state_manager.state.get('pending_batches', [])):
+            if self._send_batch(batch_info['data']):
+                logger.info("Batch pendiente ID %s enviado exitosamente. Eliminando.", batch_info.get('id'))
+                self.state_manager.remove_pending_batch(batch_info.get('id'))
             else:
-                batch['retry_count'] += 1
-                if batch['retry_count'] > self.max_retries:
-                    self.state_manager.remove_pending_batch(batch['id'])
+                batch_id = batch_info.get('id')
+                logger.warn("Fallo al enviar batch pendiente ID %s.", batch_id)
+
+                # Usar el nuevo método del StateManager
+                new_retry_count = self.state_manager.increment_batch_retry(batch_id)
+
+                if new_retry_count != -1: # Si el batch fue encontrado y actualizado
+                    logger.info("Batch ID %s: contador de reintentos actualizado a %s.", batch_id, new_retry_count)
+                    if new_retry_count > self.max_retries:
+                        logger.warn("Batch ID %s eliminado después de %s reintentos.", batch_id, new_retry_count)
+                        self.state_manager.remove_pending_batch(batch_id)
+                else:
+                    logger.error("Batch ID %s no encontrado en el estado para incrementar reintentos. Esto no debería suceder.", batch_id)
+
                 time.sleep(self.retry_delay)
-                break
+                # El 'break' significa que solo se procesa un batch pendiente por llamada a _process_pending_batches.
+                # Esto es una estrategia para no sobrecargar si hay muchos fallos. Es aceptable.
+                break 
 
     def _send_batch(self, batch):
         try:
