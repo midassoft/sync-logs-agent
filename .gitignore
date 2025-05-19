@@ -1,3 +1,4 @@
 .env
 *.pyc
 state.json
+WINDOW-DOC.md
