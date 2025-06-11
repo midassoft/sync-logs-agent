@@ -19,22 +19,28 @@ def initialize_environment():
     """
     state_file = os.getenv('STATE_FILE', '/tmp/log_agent.state')
     state_dir = os.path.dirname(state_file)
+    # Crear el directorio de estado si no existe
     if state_dir and not os.path.exists(state_dir):
         os.makedirs(state_dir)
 
+    # Crear el archivo de estado si no existe
     if not os.path.exists(state_file):
         with open(state_file, 'w') as f:
+            # Inicializar el archivo de estado
             json.dump({'last_position': 0, 'pending_batches': []}, f)
 
+    # Verificar el archivo de log
     log_file = os.getenv('LOG_FILE')
     if not log_file:
         logger.error("LOG_FILE environment variable not set")
         sys.exit(1)
 
+    # Verificar el acceso al archivo de log
     if not os.path.exists(log_file):
         logger.error("Log file %s does not exist" % log_file)
         sys.exit(1)
 
+    # Verificar el acceso de lectura al archivo de log
     if not os.access(log_file, os.R_OK):
         logger.error("No read permissions for log file %s" % log_file)
         sys.exit(1)
@@ -44,14 +50,15 @@ def load_env(filepath='.env'):
         with open(filepath) as f:
             for line in f:
                 line = line.strip()
+                # Ignorar comentarios
                 if line and not line.startswith('#'):
                     key, value = line.split('=', 1)
                     os.environ[key] = value
     except IOError:
-        print("Error: .env file not found at %s" % filepath)
+        logger.error("Error: .env file not found at %s" % filepath)
 
 def main():
-    print("==> INICIO DEL SCRIPT")
+    logger.info("==> INICIO DEL SCRIPT")
 
     try:
         # Cargar módulos
@@ -62,20 +69,19 @@ def main():
 
         # Cargar variables de entorno desde .env
         load_env()
-        print("==> .env cargado")
+        logger.info("==> .env cargado")
 
         # Inicializar entorno
         initialize_environment()
-        print("==> Entorno inicializado")
+        logger.info("==> Entorno inicializado")
 
         # Cargar configuración
         config = load_config()
-        print("==> Configuración cargada: %s" % str(config))
-        logger.debug("Loaded configuration: %s" % config)
+        logger.info("==> Configuración cargada")
 
         # Inicializar y ejecutar LogAgent
         agent = LogAgent(config)
-        print("==> LogAgent inicializado. Ejecutando...")
+        logger.info("==> LogAgent inicializado. Ejecutando...")
         agent.run()
 
     except KeyboardInterrupt:
