@@ -19,19 +19,22 @@ class LogAgent(BaseAgent):
         super(LogAgent, self).__init__()
         self.config = config
 
-        # dependecies injection
+        # estado del agente, esto lo que hace es que guarda el estado del agente
+        # en un archivo de estado.
         self.state_manager = StateManager(
             FileStateStorage(config['state_file'])
         )
+
+        # reader, lee el archivo de log.
         self.log_reader = FileLogReader(config['log_file'])
 
-        # client
+        # client, envia los logs a la api.
         self.api_client = JSONAPIClient(
             endpoint=config['api_url'],
             auth_handler=ApiKeyAuth(config['api_token'])
         )
 
-        # Inicial configuration
+        # Inicial configuration, cargar de configuración.
         self.batch_interval = config.get('batch_interval', 0.5)
         self.max_retries = config.get('max_retries', 3)
         self.retry_delay = config.get('retry_delay', 5)
@@ -112,7 +115,7 @@ class LogAgent(BaseAgent):
             }
             
             # Debug: verifica el payload
-            print("Payload a enviar:", payload)
+            logger.debug("Payload a enviar:", payload)
             
             return self.api_client.send('logs', payload)
         except Exception as e:

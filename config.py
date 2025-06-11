@@ -1,5 +1,21 @@
 import os
+import re
+
+def load_env_file():
+    """Carga manualmente un archivo .env"""
+    try:
+        with open('.env') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    os.environ[key.strip()] = value.strip().strip('"\'')
+    except IOError:
+        pass  # El archivo .env no existe, usaremos valores por defecto
+
 def load_config():
+    load_env_file()  # Cargar variables primero
+    
     return {
         'source': os.getenv('SOURCE'),
         'log_file': os.getenv('LOG_FILE', '/var/log/syslog'),
