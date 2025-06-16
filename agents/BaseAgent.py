@@ -1,8 +1,11 @@
+from __future__ import print_function, division, absolute_import, unicode_literals
 import abc
 import signal
+from lib import six
 
+@six.add_metaclass(abc.ABCMeta)
 class BaseAgent(object):
-    __metaclass__ = abc.ABCMeta
+    
 
     def __init__(self):
         self.__stop_event = False

@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+
+from __future__ import print_function, division, absolute_import, unicode_literals
 class StateManager:
     def __init__(self, storage):
         self.storage = storage

@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
+
+from __future__ import print_function, division, absolute_import, unicode_literals
 import json
 import os
 import logging
 import traceback # Para logging más detallado si es necesario
+import io
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +27,7 @@ class FileStateStorage(object): # Usar object si no tienes BaseStateStorage
         try:
             # 1. Escribir en el archivo temporal
             logger.debug("FileStateStorage: Escribiendo a archivo temporal %s", temp_file_path)
-            with open(temp_file_path, 'w') as f:
+            with io.open(temp_file_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=4) # indent=4 para legibilidad
             logger.debug("FileStateStorage: Escritura a %s completada.", temp_file_path)
 
@@ -78,7 +82,7 @@ class FileStateStorage(object): # Usar object si no tienes BaseStateStorage
             logger.info("FileStateStorage: Archivo de estado %s no encontrado. Retornando estado vacío/default.", self.file_path)
             return None
         try:
-            with open(self.file_path, 'r') as f:
+            with io.open(self.file_path, 'r', encoding='utf-8') as f:
                 data = json.load(f) 
             logger.info("FileStateStorage: Estado cargado exitosamente desde %s", self.file_path)
             return data

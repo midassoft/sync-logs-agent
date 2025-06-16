@@ -1,66 +1,123 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import urllib2
+from __future__ import print_function, division, absolute_import, unicode_literals
+import sys
+import os
 import json
 import socket
 import logging
+from time import time
 from clients.BaseApiClient import BaseApiClient
 
-# Cada módulo define su propio logger. Es una buena práctica.
+# Configuración de imports para six (compatible con estructura de carpetas)
+LIB_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'lib')
+sys.path.insert(0, LIB_DIR)
+try:
+    import six
+    from six.moves.urllib import request, error
+except ImportError as e:
+    logging.error("Critical error: Could not import six library: %s", str(e))
+    sys.exit(1)
+
 logger = logging.getLogger(__name__)
 
 class JSONAPIClient(BaseApiClient):
-    def __init__(self, endpoint, auth_handler=None):
+    def __init__(self, endpoint, auth_handler=None, timeout=10):
         """
-        Constructor.
-
-        :param endpoint: la URL base de la API sin trailing slash
-        :type endpoint: str
-        :param auth_handler: manejador de autenticación (opcional)
-        :type auth_handler: BaseAuth
-        :param timeout: timeout de la conexión en segundos (opcional, por defecto 10)
-        :type timeout: int
+        Constructor mejorado.
+        
+        Args:
+            endpoint (str): URL base de la API (sin trailing slash)
+            auth_handler (BaseAuth, optional): Manejador de autenticación
+            timeout (int, optional): Timeout en segundos. Default 10.
         """
         self.endpoint = endpoint.rstrip('/')
         self.auth_handler = auth_handler
-        self.timeout = 10
+        self.timeout = timeout
+        self.retry_attempts = 3  # Nuevo: intentos de reintento
+        self.retry_delay = 1     # Nuevo: delay entre reintentos (segundos)
 
-    def send(self, endpoint, data):
+    def _prepare_request(self, data):
+        """Prepara los headers y body de la request."""
         headers = {
             'Content-Type': 'application/json',
-            'User-Agent': 'LogAgent/1.0'
+            'User-Agent': 'LogAgent/1.0',
+            'Accept': 'application/json'
         }
-
+        
         if self.auth_handler:
             headers = self.auth_handler.authenticate(headers)
         
-        try:
-            body = json.dumps(data)
-            req = urllib2.Request(self.endpoint, body, headers)
-            response = urllib2.urlopen(req, timeout=self.timeout)
+        return headers, json.dumps(data).encode('utf-8')
+
+    def _handle_response(self, response):
+        """Procesa la respuesta de la API."""
+        status = response.getcode()
+        content = response.read()
+        
+        logger.info("API Response [%s]", status)
+        if content:
+            try:
+                json_response = json.loads(content)
+                logger.debug("Response content: %s", 
+                           json.dumps(json_response, indent=2))
+                return True, json_response
+            except ValueError:
+                logger.debug("Raw response: %s", content)
+        
+        return status in (200, 201, 204), None
+
+    def send(self, endpoint, data):
+        """
+        Envía datos a la API con manejo de errores robusto.
+        
+        Args:
+            endpoint (str): Endpoint específico (se une a self.endpoint)
+            data (dict): Datos a enviar
             
-            status = response.getcode()
-            content = response.read()
-
-            logger.info("✅ API Response: Status Code %s", status)
-            if content:
-                logger.debug("📦 API Response content: %s", content)
-
-            return status in (200, 201, 204)
-
-        except urllib2.HTTPError as e:
-            error_reason = e.reason if hasattr(e, 'reason') else 'Unknown Error'
-            logger.error("❌ HTTP Error: %s (%s)", e.code, error_reason)
-
-        except urllib2.URLError as e:
-            reason = e.reason if hasattr(e, 'reason') else str(e)
-            logger.error("❌ URL Error: %s", reason)
-
-        except socket.timeout:
-            logger.error("⏰ Timeout after %s seconds", self.timeout)
-
-        except Exception as e:
-            logger.error("⚠️ Unhandled error: %s", str(e))
-
-        return False
+        Returns:
+            tuple: (success, response_data)
+        """
+        url = "{}/{}".format(self.endpoint, endpoint.lstrip('/'))
+        
+        for attempt in range(self.retry_attempts):
+            try:
+                headers, body = self._prepare_request(data)
+                req = request.Request(url, body, headers)
+                
+                start_time = time()
+                response = request.urlopen(req, timeout=self.timeout)
+                latency = time() - start_time
+                
+                logger.debug("Request latency: %.2fs", latency)
+                return self._handle_response(response)
+                
+            except error.HTTPError as e:
+                error_reason = getattr(e, 'reason', 'Unknown Error')
+                logger.error("HTTP Error %s: %s (Attempt %d/%d)", 
+                            e.code, error_reason, attempt+1, self.retry_attempts)
+                if attempt == self.retry_attempts - 1:
+                    return False, {'error': error_reason, 'code': e.code}
+                
+            except error.URLError as e:
+                reason = getattr(e, 'reason', str(e))
+                logger.error("URL Error: %s (Attempt %d/%d)", 
+                           reason, attempt+1, self.retry_attempts)
+                if attempt == self.retry_attempts - 1:
+                    return False, {'error': reason}
+                
+            except socket.timeout:
+                logger.error("Timeout after %s seconds (Attempt %d/%d)", 
+                           self.timeout, attempt+1, self.retry_attempts)
+                if attempt == self.retry_attempts - 1:
+                    return False, {'error': 'timeout'}
+                
+            except Exception as e:
+                logger.error("Unhandled error: %s", str(e), exc_info=True)
+                return False, {'error': str(e)}
+            
+            if attempt < self.retry_attempts - 1:
+                time.sleep(self.retry_delay)
+        
+        return False, {'error': 'max retries exceeded'}
