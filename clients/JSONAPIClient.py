@@ -7,7 +7,7 @@ import os
 import json
 import socket
 import logging
-from time import time
+import time
 from clients.BaseApiClient import BaseApiClient
 
 # Configuración de imports para six (compatible con estructura de carpetas)
@@ -43,7 +43,7 @@ class JSONAPIClient(BaseApiClient):
         headers = {
             'Content-Type': 'application/json',
             'User-Agent': 'LogAgent/1.0',
-            'Accept': 'application/json'
+            'Accept': 'application/json',
         }
         
         if self.auth_handler:
@@ -56,15 +56,17 @@ class JSONAPIClient(BaseApiClient):
         status = response.getcode()
         content = response.read()
         
-        logger.info("API Response [%s]", status)
+        logger.info(u"API Response [%s]", status)
         if content:
             try:
+                # Intenta decodificar el contenido como JSON antes de parsear
+                decoded_content = content.decode('utf-8')
                 json_response = json.loads(content)
-                logger.debug("Response content: %s", 
+                logger.debug(u"Response content: %s", 
                            json.dumps(json_response, indent=2))
                 return True, json_response
             except ValueError:
-                logger.debug("Raw response: %s", content)
+                logger.debug(u"Raw response: %s", content)
         
         return status in (200, 201, 204), None
 
@@ -79,42 +81,41 @@ class JSONAPIClient(BaseApiClient):
         Returns:
             tuple: (success, response_data)
         """
-        url = "{}/{}".format(self.endpoint, endpoint.lstrip('/'))
+        url = "{0}/{1}".format(self.endpoint, endpoint.lstrip('/'))
         
         for attempt in range(self.retry_attempts):
             try:
                 headers, body = self._prepare_request(data)
                 req = request.Request(url, body, headers)
-                
-                start_time = time()
+                start_time = time.time()
                 response = request.urlopen(req, timeout=self.timeout)
-                latency = time() - start_time
+                latency = time.time() - start_time
                 
-                logger.debug("Request latency: %.2fs", latency)
+                logger.debug(u"Request latency: %.2fs", latency)
                 return self._handle_response(response)
                 
             except error.HTTPError as e:
                 error_reason = getattr(e, 'reason', 'Unknown Error')
-                logger.error("HTTP Error %s: %s (Attempt %d/%d)", 
+                logger.error(u"HTTP Error %s: %s (Attempt %d/%d)", 
                             e.code, error_reason, attempt+1, self.retry_attempts)
                 if attempt == self.retry_attempts - 1:
                     return False, {'error': error_reason, 'code': e.code}
                 
             except error.URLError as e:
                 reason = getattr(e, 'reason', str(e))
-                logger.error("URL Error: %s (Attempt %d/%d)", 
+                logger.error(u"URL Error: %s (Attempt %d/%d)", 
                            reason, attempt+1, self.retry_attempts)
                 if attempt == self.retry_attempts - 1:
                     return False, {'error': reason}
                 
             except socket.timeout:
-                logger.error("Timeout after %s seconds (Attempt %d/%d)", 
+                logger.error(u"Timeout after %s seconds (Attempt %d/%d)", 
                            self.timeout, attempt+1, self.retry_attempts)
                 if attempt == self.retry_attempts - 1:
                     return False, {'error': 'timeout'}
                 
             except Exception as e:
-                logger.error("Unhandled error: %s", str(e), exc_info=True)
+                logger.error(u"Unhandled error: %s", str(e), exc_info=True)
                 return False, {'error': str(e)}
             
             if attempt < self.retry_attempts - 1:

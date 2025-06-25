@@ -6,7 +6,7 @@ import io
 def load_env_file():
     """Carga manualmente un archivo .env"""
     try:
-        with io.open('.env', 'r') as f:
+        with io.open('.env', 'r', encoding='utf-8') as f:
             for line in f:
                 line = line.strip()
                 if line and not line.startswith('#') and '=' in line:
@@ -14,6 +14,9 @@ def load_env_file():
                     os.environ[key.strip()] = value.strip().strip('"\'')
     except IOError:
         pass  # El archivo .env no existe, usaremos valores por defecto
+    except UnicodeDecodeError:
+        pass  # No se pudo decodificar el archivo .env
+
 
 def load_config():
     load_env_file()  # Cargar variables primero

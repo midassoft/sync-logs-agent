@@ -20,6 +20,7 @@ El agente monitorea un archivo de log en tiempo real, procesa las nuevas entrada
 ## 3. Requisitos
 
 - **Python 2.6** o una versión compatible de la rama 2.x.
+- **Python 3** se trabaja para la compatibilidad con esta version.
 - Acceso de lectura al archivo de log que se desea monitorear.
 - Conectividad de red hacia el endpoint de la API.
 
