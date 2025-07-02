@@ -9,6 +9,7 @@ import socket
 import logging
 import time
 from clients.BaseApiClient import BaseApiClient
+import ssl
 
 # Configuración de imports para six (compatible con estructura de carpetas)
 LIB_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'lib')
@@ -81,14 +82,17 @@ class JSONAPIClient(BaseApiClient):
         Returns:
             tuple: (success, response_data)
         """
-        url = "{0}/{1}".format(self.endpoint, endpoint.lstrip('/'))
+        base_url = self.endpoint.rstrip('/')
+        endpoint = endpoint.lstrip('/')
+        url = base_url + '/' + endpoint
+        print("El url es: " + url) #borrar
         
         for attempt in range(self.retry_attempts):
             try:
                 headers, body = self._prepare_request(data)
                 req = request.Request(url, body, headers)
                 start_time = time.time()
-                response = request.urlopen(req, timeout=self.timeout)
+                response = request.urlopen(req, timeout=self.timeout) #borrar
                 latency = time.time() - start_time
                 
                 logger.debug(u"Request latency: %.2fs", latency)

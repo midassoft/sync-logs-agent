@@ -9,7 +9,6 @@ import json
 import logging
 import io
 
-
 # configuracion de rutas para imports
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 LIB_DIR = os.path.join(PROJECT_ROOT, 'lib')
@@ -18,7 +17,7 @@ sys.path.insert(0, LIB_DIR)
 import six
 from six.moves.urllib import request, error
 
-# Configuración básica de logging compatible con Python 2
+# Configuración básica de logging compatible con Python 2 y 3
 # 1. Obtener el logger RAÍZ. Todos los demás loggers heredarán de este.
 root_logger = logging.getLogger()
 root_logger.setLevel(logging.INFO)
@@ -27,11 +26,10 @@ root_logger.setLevel(logging.INFO)
 handler = logging.StreamHandler(sys.stdout)
 
 # 3. Envolver el stream del handler con un codificador UTF-8.
-utf8_writer = codecs.getwriter('utf-8')
 if six.PY2:
+    utf8_writer = codecs.getwriter('utf-8')
     handler.stream = utf8_writer(handler.stream, 'strict')
-else:
-    handler.stream = utf8_writer(handler.stream)
+
 
 # 4. Definir el formato del mensaje para este handler
 formatter = logging.Formatter('%(asctime)s - %(name)s - [%(levelname)s] %(message)s')

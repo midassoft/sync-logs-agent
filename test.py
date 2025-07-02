@@ -21,14 +21,11 @@ logger.setLevel(logging.INFO)
 # 2. Crear un handler que escriba en la consola (stdout)
 handler = logging.StreamHandler(sys.stdout)
 
-# 3. Envolver el stream del handler con un codificador UTF-8.
-#    Esta es la parte crucial y más directa.
-utf8_writer = codecs.getwriter('utf-8')
+# 3. SOLO PARA PYTHON 2: Envolver el stream del handler con un codificador UTF-8
+#    En python 3, el StreamHandler ya es UTF-8 por defecto
 if six.PY2:
+    utf8_writer = codecs.getwriter('utf-8')
     handler.stream = utf8_writer(handler.stream, 'strict')
-else:
-    # En Python 3 el manejo de buffers es diferente
-    handler.stream = utf8_writer(handler.stream)
 
 # 4. Definir el formato del mensaje para este handler
 formatter = logging.Formatter('%(message)s')

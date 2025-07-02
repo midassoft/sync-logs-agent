@@ -7,17 +7,20 @@ import logging
 from readers.BaseLogReader import BaseLogReader
 import io
 
-
 logger = logging.getLogger(__name__)
 
 class FileLogReader(BaseLogReader):
     def __init__(self, file_path):
-        super(FileLogReader, self).__init__(file_path)
-        self._file = None
-        self._position = 0
-        self._inode = None
+        super(FileLogReader, self).__init__(file_path) 
+        self._file = None # Archivo de log
+        self._position = 0 # Posición en el archivo
+        self._inode = None # Inode del archivo
 
     def _open_file(self):
+        """
+        Abre el archivo de log si es necesario y devuelve True si tiene exito.
+        Si el archivo no existe o no se puede abrir, devuelve False.
+        """
         try:
             if not os.path.exists(self.resource):
                 logger.warning(u"FileLogReader: El archivo de log %s no existe.", self.resource)
