@@ -85,11 +85,11 @@ class JSONAPIClient(BaseApiClient):
         base_url = self.endpoint.rstrip('/')
         endpoint = endpoint.lstrip('/')
         url = base_url + '/' + endpoint
-        print("El url es: " + url) #borrar
         
         for attempt in range(self.retry_attempts):
             try:
                 headers, body = self._prepare_request(data)
+                print(u"EL BODY ES %s", body)
                 req = request.Request(url, body, headers)
                 start_time = time.time()
                 response = request.urlopen(req, timeout=self.timeout) #borrar

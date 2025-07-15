@@ -109,7 +109,7 @@ class AgentTester(object):
             'test_run': True, 
             'message': 'Connection test from LogAgent'
         }
-        success, _ = self.api_client.send('logs', test_payload)
+        success, _ = self.api_client.send('test', test_payload)
         return success
 
 
