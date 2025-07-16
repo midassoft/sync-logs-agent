@@ -4,13 +4,13 @@
 
 ## 1. Resumen
 
-Este agente es una solución ligera y robusta para la recolección y reenvío de logs desde servidores a un endpoint de API centralizado. Su principal característica es que está desarrollado en **Python 2.6** para garantizar la máxima compatibilidad con sistemas operativos legacy (como CentOS 6) que ya no cuentan con soporte oficial, así como con sistemas más modernos que tengan esta versión de Python disponible.
+Este agente es una solución ligera y robusta para la recolección y reenvío de logs desde servidores a un endpoint de API centralizado. Su principal característica es que está desarrollado en **Python 2.6** para garantizar la máxima compatibilidad con sistemas operativos legacy (como CentOS 6) que ya no cuentan con soporte oficial, así como con sistemas más modernos que tengan esta versión de Python disponible. Se puede ejecutar en entornos de Python `2.6` y `3.x`.
 
 El agente monitorea un archivo de log en tiempo real, procesa las nuevas entradas en lotes (batches) y los envía de forma segura a una API. Incluye persistencia de estado para evitar la duplicación de logs tras reinicios y un sistema de reintentos para manejar fallos temporales de conexión.
 
 ## 2. Características Principales
 
-- **Alta Compatibilidad**: Diseñado para ejecutarse en entornos con Python 2.6.
+- **Alta Compatibilidad**: Diseñado para ejecutarse en entornos con Python `2.6`, lo que garantiza la compatibilidad con sistemas operativos legacy. y compatibilidad con Python `3.x`.
 - **Persistencia de Estado**: Guarda la última posición de lectura del archivo de log. Si el agente se detiene y reinicia, continuará desde el punto exacto donde se quedó, sin enviar datos duplicados.
 - **Procesamiento por Lotes (Batching)**: Agrupa múltiples líneas de log en una sola solicitud para optimizar el rendimiento de la red.
 - **Reintentos Automáticos**: Si falla el envío a la API (por problemas de red o del servidor), el agente reintentará el envío varias veces antes de descartar el lote.
@@ -25,6 +25,8 @@ El agente monitorea un archivo de log en tiempo real, procesa las nuevas entrada
 - Conectividad de red hacia el endpoint de la API.
 
 ## 4. Instalación y Configuración
+#### Primero configura u entorno de prueba local
+Esto se hace siguiedo los pasos que estan en este documento [GENERADOR.md](empty)
 
 Sigue estos pasos para configurar el agente en un servidor:
 
@@ -56,9 +58,12 @@ SOURCE=servidor_centos6
 LOG_FILE=/var/log/mi_app.log
 
 # (OBLIGATORIO) URL completa del endpoint de la API que recibirá los logs.
-API_URL=http://host/api/logs # Esta es la url que se esta trabajando en local, puedes cambiarla, pero el servidor que recibe los logs recibe un POST en api/logs 
+# Esta es la url que se esta trabajando en local, puedes cambiarla, pero el servidor que recibe los logs recibe un POST en api/logs 
+# Solo se necesita la url sin el `logs` ya que el agente se encarga de poner esto.
+API_URL=http://host/api/ 
 
 # (OBLIGATORIO) Token de autenticación para la API.
+# Este es el token es el que esta en el servidor que recibe los logs
 API_TOKEN=tu_api_key_secreta
 
 # --- Configuración Avanzada (Valores por defecto recomendados) ---
@@ -93,7 +98,7 @@ Antes de ejecutar el agente, es **altamente recomendable** usar el script de pru
 Ejecútalo con:
 
 ```
-python connection_test.py
+python3 connection_test.py
 
 ```
 
@@ -101,14 +106,14 @@ python connection_test.py
 
 ```
 --- Iniciando Pruebas de Sanidad del Agente ---
-▶️  Probando: Acceso al archivo de logs...
-✅ Pasó: Acceso al archivo de logs
+--> Probando: Acceso al archivo de logs...
+ [OK]: Acceso al archivo de logs
 
-▶️  Probando: Conectividad y Autenticación API...
-✅ API Response: Status Code 200
-✅ Pasó: Conectividad y Autenticación API
+--> Probando: Conectividad y Autenticacion API...
+  -> Intentando enviar un payload de prueba a: http://192.168.5.241:8000/api/
+ [OK]: Conectividad y Autenticacion API
 
-🎉 ¡Excelente! Todas las pruebas pasaron. El agente está listo para ejecutarse.
+  -> ¡Excelente! Todas las pruebas pasaron. El agente esta listo para ejecutarse.
 
 ```
 
@@ -116,11 +121,18 @@ python connection_test.py
 
 ```
 --- Iniciando Pruebas de Sanidad del Agente ---
-▶️  Probando: Acceso al archivo de logs...
-❌ HTTP Error: 404 (Not Found)
-❌ Falló: Conectividad y Autenticación API
+--> Probando: Acceso al archivo de logs...
+ [OK]: Acceso al archivo de logs
 
-🚨 Una o más pruebas fallaron. Revisa la configuración y los logs de error.
+--> Probando: Conectividad y Autenticacion API...
+  -> Intentando enviar un payload de prueba a: http://192.168.5.241:8000/api/
+
+URL Error: [Errno 61] Connection refused (Attempt 1/3)
+URL Error: [Errno 61] Connection refused (Attempt 2/3)
+URL Error: [Errno 61] Connection refused (Attempt 3/3)
+  [FALLO]: Conectividad y Autenticacion API
+
+  -> Una o mas pruebas fallaron. Revisa la configuracion.
 
 ```
 
