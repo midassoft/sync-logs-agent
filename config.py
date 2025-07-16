@@ -1,10 +1,12 @@
+from __future__ import print_function, division, absolute_import, unicode_literals
 import os
 import re
+import io
 
 def load_env_file():
     """Carga manualmente un archivo .env"""
     try:
-        with open('.env') as f:
+        with io.open('.env', 'r', encoding='utf-8') as f:
             for line in f:
                 line = line.strip()
                 if line and not line.startswith('#') and '=' in line:
@@ -12,6 +14,9 @@ def load_env_file():
                     os.environ[key.strip()] = value.strip().strip('"\'')
     except IOError:
         pass  # El archivo .env no existe, usaremos valores por defecto
+    except UnicodeDecodeError:
+        pass  # No se pudo decodificar el archivo .env
+
 
 def load_config():
     load_env_file()  # Cargar variables primero
@@ -19,7 +24,7 @@ def load_config():
     return {
         'source': os.getenv('SOURCE'),
         'log_file': os.getenv('LOG_FILE', '/var/log/syslog'),
-        'api_url': os.getenv('API_URL', 'http://localhost:8000/logs'),
+        'api_url': os.getenv('API_URL', 'http://localhost:8000/api/logs'),
         'api_token': os.getenv('API_TOKEN', 'default-key'),
         'batch_interval': float(os.getenv('BATCH_INTERVAL', '0.5')),
         'state_file': os.getenv('STATE_FILE', '/tmp/log_agent.state'),

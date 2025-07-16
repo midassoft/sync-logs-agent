@@ -1,11 +1,14 @@
-from abc import ABCMeta, abstractmethod
+from __future__ import print_function, division, absolute_import, unicode_literals
+import abc
+from lib import six
 
+@six.add_metaclass(abc.ABCMeta)
 class BaseLogReader:
-    __metaclass__ = ABCMeta
+
     def __init__(self, resource):
         self.resource = resource
 
-    @abstractmethod
+    @abc.abstractmethod
     def read(self):
         """
         Read data from the resource and return it.

@@ -1,4 +1,5 @@
-from BaseAuth import BaseAuth
+from __future__ import print_function, division, absolute_import, unicode_literals
+from .BaseAuth import BaseAuth
 
 class ApiKeyAuth(BaseAuth):
     def __init__(self, api_key):

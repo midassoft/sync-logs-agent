@@ -2,3 +2,4 @@
 *.pyc
 state.json
 WINDOW-DOC.md
+*.log
