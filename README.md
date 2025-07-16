@@ -26,7 +26,7 @@ El agente monitorea un archivo de log en tiempo real, procesa las nuevas entrada
 
 ## 4. Instalación y Configuración
 #### Primero configura u entorno de prueba local
-Esto se hace siguiedo los pasos que estan en este documento [GENERADOR.md](empty)
+Esto se hace siguiedo los pasos que estan en este documento [GENERADOR.md](https://github.com/midassoft/sync-logs-agent/blob/main/GENERADOR.md)
 
 Sigue estos pasos para configurar el agente en un servidor:
 
