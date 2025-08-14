@@ -50,10 +50,11 @@ class AgentTester(object):
         
         self.log_reader = FileLogReader(self.config.get('log_file'))
         
-        auth_handler = ApiKeyAuth(self.config.get('api_token'))
+        auth_handler = ApiKeyAuth(self.config.get('secret_token'))
         self.api_client = JSONAPIClient(
             endpoint=self.config.get('api_url'),
-            auth_handler=auth_handler
+            auth_handler=auth_handler,
+            ssl_cert_file=self.config.get('ssl_cert_file')
         )
 
     def test_all(self):
@@ -99,8 +100,8 @@ class AgentTester(object):
         if not self.config.get('api_url'):
             logger.error(u"  -> Variable de entorno API_URL no esta configurada.")
             return False
-        if not self.config.get('api_token'):
-            logger.error(u"  -> Variable de entorno API_TOKEN no esta configurada.")
+        if not self.config.get('secret_token'):
+            logger.error(u"  -> Variable de entorno SECRET_TOKEN no esta configurada.")
             return False
 
         logger.info(u"  -> Intentando enviar un payload de prueba a: %s", self.config.get('api_url'))

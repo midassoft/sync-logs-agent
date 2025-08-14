@@ -24,7 +24,7 @@ except ImportError as e:
 logger = logging.getLogger(__name__)
 
 class JSONAPIClient(BaseApiClient):
-    def __init__(self, endpoint, auth_handler=None, timeout=10):
+    def __init__(self, endpoint, auth_handler=None, timeout=10, ssl_cert_file=None):
         """
         Constructor mejorado.
         
@@ -38,6 +38,13 @@ class JSONAPIClient(BaseApiClient):
         self.timeout = timeout
         self.retry_attempts = 3  # Nuevo: intentos de reintento
         self.retry_delay = 1     # Nuevo: delay entre reintentos (segundos)
+        self.ssl_cert_file = ssl_cert_file
+
+    def create_ssl_context(self):
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE  # ¡Solo para desarrollo!
+        return context
 
     def _prepare_request(self, data):
         """Prepara los headers y body de la request."""
@@ -53,8 +60,14 @@ class JSONAPIClient(BaseApiClient):
         return headers, json.dumps(data).encode('utf-8')
 
     def _handle_response(self, response):
+        # intentar decodificar la respuesta como JSON
+        """Maneja la respuesta de la API."""
+        if not response:
+            logger.error(u"Empty response received from API.")
+            return False, None
         """Procesa la respuesta de la API."""
         status = response.getcode()
+        logger.debug(u"Response status code: %s", status)
         content = response.read()
         
         logger.info(u"API Response [%s]", status)
@@ -85,13 +98,15 @@ class JSONAPIClient(BaseApiClient):
         base_url = self.endpoint.rstrip('/')
         endpoint = endpoint.lstrip('/')
         url = base_url + '/' + endpoint
+
+        ssl_context = self.create_ssl_context()
         
         for attempt in range(self.retry_attempts):
             try:
                 headers, body = self._prepare_request(data)
                 req = request.Request(url, body, headers)
                 start_time = time.time()
-                response = request.urlopen(req, timeout=self.timeout) #borrar
+                response = request.urlopen(req, timeout=self.timeout, context=ssl_context) #borrar
                 latency = time.time() - start_time
                 
                 logger.debug(u"Request latency: %.2fs", latency)

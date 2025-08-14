@@ -8,6 +8,8 @@ import os
 import json
 import logging
 import io
+import signal
+import time
 
 # configuracion de rutas para imports
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -30,7 +32,6 @@ if six.PY2:
     utf8_writer = codecs.getwriter('utf-8')
     handler.stream = utf8_writer(handler.stream, 'strict')
 
-
 # 4. Definir el formato del mensaje para este handler
 formatter = logging.Formatter('%(asctime)s - %(name)s - [%(levelname)s] %(message)s')
 handler.setFormatter(formatter)
@@ -42,6 +43,15 @@ root_logger.addHandler(handler)
 
 # logger para el propio main.py (ahora heredará la configuración correcta)
 logger = logging.getLogger(__name__)
+
+# Variable global para manejo de shutdown
+shutdown_requested = False
+
+def signal_handler(signum, frame):
+    """Manejador global de señales para shutdown limpio"""
+    global shutdown_requested
+    logger.info(u"Señal de interrupción recibida en main (%s). Solicitando shutdown...", signum)
+    shutdown_requested = True
 
 def initialize_environment():
     """
@@ -120,6 +130,12 @@ def load_env(filepath='.env'):
         logger.error(u"Error: .env file not found at %s" % filepath)
 
 def main():
+    global shutdown_requested
+    
+    # Configurar manejadores de señales
+    signal.signal(signal.SIGINT, signal_handler)   # Ctrl+C
+    signal.signal(signal.SIGTERM, signal_handler)  # Kill
+    
     logger.info(u"==> INICIO DEL SCRIPT")
 
     try:
@@ -141,17 +157,26 @@ def main():
         config = load_config()
         logger.info(u"==> Configuración cargada")
 
-        # Inicializar y ejecutar LogAgent
+        # Inicializar LogAgent
         agent = LogAgent(config)
         logger.info(u"==> LogAgent inicializado. Ejecutando...")
+        
+        # CAMBIO PRINCIPAL: Una sola ejecución con loop interno
+        # El LogAgent ahora maneja su propio loop interno
         agent.run()
+        
+        # Si llegamos aquí, el agente terminó normalmente o por shutdown
+        logger.info(u"LogAgent terminó la ejecución")
 
     except KeyboardInterrupt:
-        logger.info(u"Log Agent stopped by user")
-        sys.exit(0)
+        logger.info(u"Log Agent stopped by user (KeyboardInterrupt)")
+        shutdown_requested = True
     except Exception as e:
         logger.error(u"Fatal error: %s" % str(e))
         sys.exit(1)
+    finally:
+        logger.info(u"==> Finalizando aplicación...")
+        sys.exit(0)
 
 if __name__ == '__main__':
     main()

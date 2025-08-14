@@ -6,6 +6,6 @@ class ApiKeyAuth(BaseAuth):
         self.api_key = api_key
 
     def authenticate(self, headers):
-        """Devuelve un diccionario de headers con la API Key"""
+        """Devuelve un diccionario de headers con la SECRET Key"""
         headers['X-API-KEY'] = self.api_key
         return headers
