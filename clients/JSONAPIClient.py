@@ -104,6 +104,7 @@ class JSONAPIClient(BaseApiClient):
         for attempt in range(self.retry_attempts):
             try:
                 headers, body = self._prepare_request(data)
+                logger.debug(u"Request body: %s", body.decode('utf-8'))
                 req = request.Request(url, body, headers)
                 start_time = time.time()
                 response = request.urlopen(req, timeout=self.timeout, context=ssl_context) #borrar
