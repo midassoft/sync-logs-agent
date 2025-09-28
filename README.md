@@ -58,13 +58,13 @@ SOURCE=servidor_centos6
 LOG_FILE=/var/log/mi_app.log
 
 # (OBLIGATORIO) URL completa del endpoint de la API que recibirá los logs.
-# Esta es la url que se esta trabajando en local, puedes cambiarla, pero el servidor que recibe los logs recibe un POST en api/logs 
-# Solo se necesita la url sin el `logs` ya que el agente se encarga de poner esto.
-API_URL=http://host/api/ 
+# URL del servicio centralizado de logs. El agente añade automáticamente '/logs' al final.
+# Ejemplos: http://localhost:8000/api, https://logs.empresa.com/api, http://192.168.1.100:3000/api
+API_URL=http://localhost:8000/api
 
 # (OBLIGATORIO) Token de autenticación para la API.
 # Este es el token es el que esta en el servidor que recibe los logs
-API_TOKEN=tu_api_key_secreta
+SECRET_TOKEN=tu_api_key_secreta
 
 # --- Configuración Avanzada (Valores por defecto recomendados) ---
 
@@ -85,6 +85,123 @@ STATE_FILE=/var/run/log_agent.state
 
 ```
 
+## 4.3. Variables de Entorno - Referencia Completa
+
+### Descripción Detallada de Cada Variable
+
+A continuación se explica cada variable de entorno, su propósito, dónde obtener su valor y consideraciones importantes:
+
+#### **Variables Obligatorias**
+
+**`SOURCE`** - *Identificador único del servidor*
+- **Propósito**: Identifica de forma única el servidor desde donde se envían los logs
+- **Dónde obtenerlo**:
+  - **Inventario de servidores**: Consultar con el equipo de infraestructura
+  - **Convenciones de nombres**: Usar el hostname o un identificador estándar de la organización
+  - **Ejemplos**: `web-server-01`, `database-prod-001`, `app-centos-legacy`
+- **Importancia**: Crítica para el seguimiento y depuración de logs
+- **Consideraciones**: Debe ser único en toda la infraestructura
+
+**`LOG_FILE`** - *Ruta completa al archivo de log*
+- **Propósito**: Especifica qué archivo de log será monitoreado
+- **Dónde obtenerlo**:
+  - **Documentación de la aplicación**: Revisar logs de la app que se va a monitorear
+  - **Servidores existentes**: `ls /var/log/` para ver archivos disponibles
+  - **Configuración del sistema**: Archivos como `/var/log/syslog`, `/var/log/messages`
+- **Ejemplos**: `/var/log/nginx/access.log`, `/var/log/mysql/error.log`
+- **Permisos**: El usuario que ejecute el agente debe tener permisos de lectura
+
+**`API_URL`** - *URL del servicio centralizado de logs*
+- **Propósito**: Endpoint HTTP donde se enviarán los logs
+- **Dónde obtenerlo**:
+  - **Equipo de desarrollo**: URL del servicio centralizado de logs
+  - **Documentación del proyecto**: Buscar en la documentación del servicio de logs
+  - **Configuración existente**: Si ya hay otros servidores enviando logs
+- **Formato**: `http://dominio.com/api/logs` o `https://api.empresa.com/v1/logs`
+- **Nota**: El agente automáticamente añade `/logs` al endpoint
+
+**`SECRET_TOKEN`** - *Token de autenticación API*
+- **Propósito**: Autentica las peticiones al servicio centralizado
+- **Dónde obtenerlo**:
+  - **Administrador del servicio**: Solicitar token al equipo que mantiene el servicio de logs
+  - **Panel de administración**: Si el servicio tiene interfaz web
+  - **Configuración del servicio**: Documentación del servicio centralizado
+  - **Variables de entorno existentes**: Si ya hay servidores configurados
+- **Seguridad**: Mantener secreto y rotar periódicamente
+- **Formato**: Generalmente un string alfanumérico largo
+
+#### **Variables Avanzadas (Opcionales)**
+
+**`BATCH_INTERVAL`** - *Intervalo de lectura en segundos*
+- **Propósito**: Controla cada cuánto tiempo revisa el agente el archivo de log
+- **Valor por defecto**: `0.5` segundos
+- **Rango recomendado**: `0.1` - `2.0` segundos
+- **Consideraciones**:
+  - Valores bajos = Mayor CPU, menor latencia
+  - Valores altos = Menor CPU, mayor latencia
+  - Ajustar según volumen de logs y recursos disponibles
+
+**`MAX_RETRIES`** - *Número máximo de reintentos*
+- **Propósito**: Cuántas veces reintenta enviar un lote si falla
+- **Valor por defecto**: `3`
+- **Rango recomendado**: `3` - `10`
+- **Consideraciones**: Balance entre persistencia y rendimiento
+
+**`RETRY_DELAY`** - *Tiempo de espera entre reintentos*
+- **Propósito**: Segundos entre cada reintento fallido
+- **Valor por defecto**: `5` segundos
+- **Rango recomendado**: `2` - `30` segundos
+- **Consideraciones**: Evitar saturar la red o el servicio API
+
+**`STATE_FILE`** - *Archivo de persistencia de estado*
+- **Propósito**: Guarda la posición de lectura y lotes pendientes
+- **Dónde obtenerlo**:
+  - **Permisos de escritura**: Directorio donde el agente pueda escribir
+  - **Espacio disponible**: Verificar espacio en disco
+  - **Copias de seguridad**: Considerar si debe incluirse en backups
+- **Ubicaciones típicas**:
+  - `/tmp/log_agent.state` (temporal)
+  - `/var/run/log_agent.state` (runtime)
+  - `/app/data/state.json` (aplicación)
+- **Permisos**: El usuario del agente debe poder escribir
+
+### Guía de Configuración por Entorno
+
+#### **Entorno de Desarrollo**
+```bash
+SOURCE=dev-server-local
+LOG_FILE=/var/log/syslog
+API_URL=http://localhost:8000/api/logs
+SECRET_TOKEN=dev-token-12345
+STATE_FILE=/tmp/log_agent_dev.state
+```
+
+#### **Entorno de Producción**
+```bash
+SOURCE=web-prod-001
+LOG_FILE=/var/log/nginx/access.log
+API_URL=https://logs.empresa.com/api/logs
+SECRET_TOKEN=sk-prod-abcdef123456
+STATE_FILE=/var/run/log_agent.state
+```
+
+#### **Solución de Problemas Comunes**
+
+**Error: "Variable de entorno no configurada"**
+- Verificar que el archivo `.env` existe en la raíz del proyecto
+- Revisar que no hay errores de sintaxis (espacios, caracteres especiales)
+- Confirmar que las variables están exportadas: `source .env`
+
+**Error: "No se puede acceder al archivo de log"**
+- Verificar permisos: `ls -la /ruta/al/logfile`
+- Probar acceso manual: `tail -f /ruta/al/logfile`
+- Considerar ejecutar el agente con sudo si es necesario
+
+**Error: "Conexión rechazada por el API"**
+- Verificar que la URL sea correcta: `curl URL/api/logs`
+- Confirmar que el SECRET_TOKEN sea válido
+- Revisar conectividad de red: `ping dominio.com`
+
 ## 5. Uso del Agente
 
 ### Paso 5.1: Probar la Configuración
@@ -93,12 +210,12 @@ Antes de ejecutar el agente, es **altamente recomendable** usar el script de pru
 
 1. El archivo `LOG_FILE` existe y es legible.
 2. La conexión con `API_URL` es exitosa.
-3. El `API_TOKEN` es aceptado por el servidor (no devuelve error 401 o 403).
+3. El `SECRET_TOKEN` es aceptado por el servidor (no devuelve error 401 o 403).
 
 Ejecútalo con:
 
 ```
-python3 connection_test.py
+python3 test.py
 
 ```
 
@@ -110,7 +227,7 @@ python3 connection_test.py
  [OK]: Acceso al archivo de logs
 
 --> Probando: Conectividad y Autenticacion API...
-  -> Intentando enviar un payload de prueba a: http://192.168.5.241:8000/api/
+  -> Intentando enviar un payload de prueba a: http://localhost:8000/api/
  [OK]: Conectividad y Autenticacion API
 
   -> ¡Excelente! Todas las pruebas pasaron. El agente esta listo para ejecutarse.
@@ -125,7 +242,7 @@ python3 connection_test.py
  [OK]: Acceso al archivo de logs
 
 --> Probando: Conectividad y Autenticacion API...
-  -> Intentando enviar un payload de prueba a: http://192.168.5.241:8000/api/
+  -> Intentando enviar un payload de prueba a: http://localhost:8000/api/
 
 URL Error: [Errno 61] Connection refused (Attempt 1/3)
 URL Error: [Errno 61] Connection refused (Attempt 2/3)
@@ -169,7 +286,7 @@ python main.py &
 │   └── FileStateStorage.py # Guarda y carga el estado desde un archivo.
 ├── .env.example            # Plantilla de configuración.
 ├── config.py               # Módulo para cargar la configuración desde .env.
-├── connection_test.py      # Script de diagnóstico.
+├── test.py                 # Script de diagnóstico.
 └── main.py                 # Punto de entrada para ejecutar el agente.
 
 ```
