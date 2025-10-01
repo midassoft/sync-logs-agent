@@ -27,7 +27,7 @@ class JSONAPIClient(BaseApiClient):
     def __init__(self, endpoint, auth_handler=None, timeout=10, ssl_cert_file=None):
         """
         Constructor mejorado.
-        
+
         Args:
             endpoint (str): URL base de la API (sin trailing slash)
             auth_handler (BaseAuth, optional): Manejador de autenticación
@@ -58,6 +58,27 @@ class JSONAPIClient(BaseApiClient):
             headers = self.auth_handler.authenticate(headers)
         
         return headers, json.dumps(data).encode('utf-8')
+
+    def _create_ssl_context(self):
+        """Crea un contexto SSL que desactiva verificación para desarrollo local."""
+        # Para desarrollo local con dominios .test o .local, desactivar verificación SSL
+        if self._is_local_development():
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            logger.debug(u"Usando SSL sin verificación para desarrollo local")
+            return ssl_context
+
+        # Para producción, usar verificación SSL estricta
+        return ssl.create_default_context()
+
+    def _is_local_development(self):
+        """Determina si la URL es de desarrollo local."""
+        if not self.endpoint:
+            return False
+
+        local_domains = ['.test', '.local', 'localhost', '127.0.0.1']
+        return any(domain in self.endpoint for domain in local_domains)
 
     def _handle_response(self, response):
         # intentar decodificar la respuesta como JSON
@@ -107,7 +128,14 @@ class JSONAPIClient(BaseApiClient):
                 logger.debug(u"Request body: %s", body.decode('utf-8'))
                 req = request.Request(url, body, headers)
                 start_time = time.time()
+<<<<<<< HEAD
                 response = request.urlopen(req, timeout=self.timeout, context=ssl_context) #borrar
+=======
+
+                # Crear contexto SSL y hacer la petición
+                ssl_context = self._create_ssl_context()
+                response = request.urlopen(req, timeout=self.timeout, context=ssl_context)
+>>>>>>> 70acc9e (En este commit resuelvo el problema de ssl verification.)
                 latency = time.time() - start_time
                 
                 logger.debug(u"Request latency: %.2fs", latency)
