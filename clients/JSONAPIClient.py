@@ -128,14 +128,7 @@ class JSONAPIClient(BaseApiClient):
                 logger.debug(u"Request body: %s", body.decode('utf-8'))
                 req = request.Request(url, body, headers)
                 start_time = time.time()
-<<<<<<< HEAD
                 response = request.urlopen(req, timeout=self.timeout, context=ssl_context) #borrar
-=======
-
-                # Crear contexto SSL y hacer la petición
-                ssl_context = self._create_ssl_context()
-                response = request.urlopen(req, timeout=self.timeout, context=ssl_context)
->>>>>>> 70acc9e (En este commit resuelvo el problema de ssl verification.)
                 latency = time.time() - start_time
                 
                 logger.debug(u"Request latency: %.2fs", latency)
