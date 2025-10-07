@@ -25,10 +25,10 @@ El agente monitorea un archivo de log en tiempo real, procesa las nuevas entrada
 - Conectividad de red hacia el endpoint de la API.
 
 ## 4. Instalación y Configuración
-#### Primero configura u entorno de prueba local
-Esto se hace siguiedo los pasos que estan en este documento [GENERADOR.md](https://github.com/midassoft/sync-logs-agent/blob/main/GENERADOR.md)
+#### Primero configura un entorno de prueba local si es el caso.
+(Solo en local para probar) - Esto se hace siguiedo los pasos que estan en este documento [GENERADOR.md](https://github.com/midassoft/sync-logs-agent/blob/main/GENERADOR.md)
 
-Sigue estos pasos para configurar el agente en un servidor:
+Sigue estos pasos para configurar el agente en un servidor ya en produccion:
 
 **Paso 1: Clonar el Repositorio**
 
@@ -58,17 +58,20 @@ SOURCE=servidor_centos6
 LOG_FILE=/var/log/mi_app.log
 
 # (OBLIGATORIO) URL completa del endpoint de la API que recibirá los logs.
-# URL del servicio centralizado de logs. El agente añade automáticamente '/logs' al final.
+# URL del servicio centralizado de logs. El agente añade automáticamente '/logs' al final por esta razon no es necesario poner el logs al final, solo la url /api/.
 # Ejemplos: http://localhost:8000/api, https://logs.empresa.com/api, http://192.168.1.100:3000/api
 API_URL=http://localhost:8000/api
 
 # (OBLIGATORIO) Token de autenticación para la API.
-# Este es el token es el que esta en el servidor que recibe los logs
+# Este es el token es el que esta en el servidor que recibe los logs.
 SECRET_TOKEN=tu_api_key_secreta
 
 # --- Configuración Avanzada (Valores por defecto recomendados) ---
 
 # Intervalo (en segundos) en que el agente busca nuevas líneas en el log.
+# Esto es para poder permitir que ciertos agentes que no necesitan enviar logs en tiempo real
+# de no ser necesario que se envien entonces se les puede cambiar la frecuencia de envio.
+# Tambien esto ayuda a no cargar mucho los servidores con cada log, esto ayuda a que los logs # se envian por paquetes.
 # Admite decimales. Ejemplo: 0.5 para 500 milisegundos.
 BATCH_INTERVAL=0.5
 
@@ -117,7 +120,7 @@ A continuación se explica cada variable de entorno, su propósito, dónde obten
   - **Equipo de desarrollo**: URL del servicio centralizado de logs
   - **Documentación del proyecto**: Buscar en la documentación del servicio de logs
   - **Configuración existente**: Si ya hay otros servidores enviando logs
-- **Formato**: `http://dominio.com/api/logs` o `https://api.empresa.com/v1/logs`
+- **Formato**: `http://dominio.com/api` o `https://api.empresa.com/v1`
 - **Nota**: El agente automáticamente añade `/logs` al endpoint
 
 **`SECRET_TOKEN`** - *Token de autenticación API*
@@ -171,7 +174,7 @@ A continuación se explica cada variable de entorno, su propósito, dónde obten
 ```bash
 SOURCE=dev-server-local
 LOG_FILE=/var/log/syslog
-API_URL=http://localhost:8000/api/logs
+API_URL=http://localhost:8000/api
 SECRET_TOKEN=dev-token-12345
 STATE_FILE=/tmp/log_agent_dev.state
 ```
@@ -180,7 +183,7 @@ STATE_FILE=/tmp/log_agent_dev.state
 ```bash
 SOURCE=web-prod-001
 LOG_FILE=/var/log/nginx/access.log
-API_URL=https://logs.empresa.com/api/logs
+API_URL=https://logs.empresa.com/api
 SECRET_TOKEN=sk-prod-abcdef123456
 STATE_FILE=/var/run/log_agent.state
 ```
