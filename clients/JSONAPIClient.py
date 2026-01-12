@@ -117,10 +117,18 @@ class JSONAPIClient(BaseApiClient):
             tuple: (success, response_data)
         """
         base_url = self.endpoint.rstrip('/')
-        endpoint = endpoint.lstrip('/')
-        url = base_url + '/' + endpoint
+        clean_endpoint = endpoint.lstrip('/')
+        
+        # Si la base_url ya termina con el endpoint que queremos enviar, no lo duplicamos
+        # Verificamos que termine en "/endpoint" o que sea exactamente el endpoint
+        if base_url.endswith('/' + clean_endpoint) or base_url == clean_endpoint:
+            url = base_url
+        else:
+            url = base_url + '/' + clean_endpoint
 
         ssl_context = self.create_ssl_context()
+        
+        logger.debug(u"URL de destino: %s", url)
         
         for attempt in range(self.retry_attempts):
             try:
