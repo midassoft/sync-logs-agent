@@ -107,6 +107,7 @@ class AgentTester(object):
         logger.info(u"  -> Intentando enviar un payload de prueba a: %s", self.config.get('api_url'))
         
         test_payload = {
+            'source': self.config.get('source'),
             'test_run': True, 
             'message': 'Connection test from LogAgent'
         }
