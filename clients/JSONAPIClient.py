@@ -103,7 +103,7 @@ class JSONAPIClient(BaseApiClient):
             except ValueError:
                 logger.debug(u"Raw response: %s", content)
         
-        return status in (200, 201, 204), None
+        return status in (200, 201, 202, 204), None
 
     def send(self, endpoint, data):
         """
@@ -126,7 +126,7 @@ class JSONAPIClient(BaseApiClient):
         else:
             url = base_url + '/' + clean_endpoint
 
-        ssl_context = self.create_ssl_context()
+        ssl_context = self._create_ssl_context()
         
         logger.debug(u"URL de destino: %s", url)
         

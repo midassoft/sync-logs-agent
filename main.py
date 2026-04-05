@@ -55,39 +55,23 @@ def signal_handler(signum, frame):
 
 def initialize_environment():
     """
-    Verificar y preparar el entorno de ejecución (Python 2 compatible)
+    Verificar y preparar el entorno de ejecución (Python 2 compatible).
+    Usa la misma ruta de state_file que config.py (./state/agent.state)
+    para garantizar consistencia.
     """
-    state_file = os.getenv('STATE_FILE', '/tmp/log_agent.state')
+    # La ruta canónica del state file — debe coincidir con config.py
+    project_root = os.path.dirname(os.path.abspath(__file__))
+    state_file = os.path.join(project_root, 'state', 'agent.state')
     state_dir = os.path.dirname(state_file)
 
     # Crear el directorio de estado si no existe
     if state_dir and not os.path.exists(state_dir):
         try:
             os.makedirs(state_dir)
+            logger.info(u"Directorio de estado creado: %s", state_dir)
         except OSError as e:
             logger.error(u"Error creating state directory: %s", str(e))
             sys.exit(1)
-
-    # Crear el archivo de estado si no existe
-    if not os.path.exists(state_file):
-        logger.info(u"Archivo de estado %s no encontrado. Creando...", state_file)
-        try:
-            # 1. Definir el estado inicial
-            inicial_state = {
-                'last_position': 0,
-                'pending_batches': []
-            }
-             # 2. Serializar una cadena de texto JSON
-            json_string = json.dumps(inicial_state)
-            
-            # 3. Abrir en modo binario y escribir los bytes codigi==ficados en UTF-8
-            with io.open(state_file, 'wb') as f:
-                f.write(json_string.encode('utf-8'))
-
-            logger.info(u"Archivo de estado %s creado exitosamente.", state_file)
-
-        except IOError as e:
-            logger.error(u"Error creating state file: %s", str(e))
 
     # Verificar el archivo de log
     log_file = os.getenv('LOG_FILE')
@@ -97,7 +81,7 @@ def initialize_environment():
 
     # Verificar el acceso al archivo de log
     if not os.path.exists(log_file):
-        logger.error("Log file %s does not exist" % log_file)
+        logger.error(u"Log file %s does not exist" % log_file)
         sys.exit(1)
 
     # Verificar el acceso de lectura al archivo de log
@@ -105,29 +89,8 @@ def initialize_environment():
         logger.error(u"No read permissions for log file %s" % log_file)
         sys.exit(1)
 
-def load_env(filepath='.env'):
-    """
-    Load environment variables from a .env file
-    Args: 
-        filepath (str): The path to the .env file
-
-    Raises:
-        IOError: If file cannot be opened
-        ValueError: for malformed lines
-    """
-    try:
-        with io.open(filepath, 'r', encoding='utf-8') as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith('#'):
-                    parts = line.split('=', 1)
-                    if len(parts) == 2:
-                        key, value = parts
-                        os.environ[key.strip()] = value.strip()
-                    else:
-                        logger.warning("Invalid line in .env file (missing '='): %s", line)
-    except IOError:
-        logger.error(u"Error: .env file not found at %s" % filepath)
+# load_env() removed — use load_env_file() from config.py to ensure
+# consistent parsing (handles quoted values like SECRET_TOKEN="xxx").
 
 def main():
     global shutdown_requested
@@ -145,8 +108,9 @@ def main():
 
         logger.info(u"Starting Log Agent")
 
-        # Cargar variables de entorno desde .env
-        load_env()
+        # Cargar variables de entorno desde .env (usando config.py para parseo consistente)
+        from config import load_env_file
+        load_env_file()
         logger.info(u"==> .env cargado")
 
         # Inicializar entorno
