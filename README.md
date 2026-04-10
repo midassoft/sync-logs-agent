@@ -19,35 +19,54 @@ El agente monitorea un archivo de log en tiempo real, procesa las nuevas entrada
 
 ## 3. Requisitos
 
-- **Python 2.6** o una versión compatible de la rama 2.x.
-- **Python 3** se trabaja para la compatibilidad con esta version.
-- Acceso de lectura al archivo de log que se desea monitorear.
-- Conectividad de red hacia el endpoint de la API.
+### En el servidor destino (instalación automática)
+
+- **Python >= 2.6** (2.6, 2.7, o cualquier 3.x)
+- `curl` o `wget` (para descargar el agente durante la instalación)
+- `unzip` (para extraer el agente — si no está disponible, se usa Python como fallback)
+- Acceso de lectura al archivo de log a monitorear
+- Conectividad de red hacia el servidor de logs
+
+**No se requiere:** git, pip, ni acceso root (aunque root permite instalar un servicio de sistema).
+
+### Dependencias Python
+
+Todas las dependencias están vendoreadas en `lib/`. No se necesita `pip install` en ningún momento:
+
+- `six` → `lib/six.py` (compatibilidad Python 2/3)
+- `config.py` tiene su propio parser de `.env` (sin `python-dotenv`)
+- Todo el JSON usa el módulo `json` de la stdlib (sin `simplejson`)
 
 ## 4. Instalación y Configuración
-#### Primero configura u entorno de prueba local
-Esto se hace siguiedo los pasos que estan en este documento [GENERADOR.md](https://github.com/midassoft/sync-logs-agent/blob/main/GENERADOR.md)
 
-Sigue estos pasos para configurar el agente en un servidor:
+### Instalación automática (producción)
 
-**Paso 1: Clonar el Repositorio**
+El agente **no se instala manualmente**. El servidor de logs genera un comando de instalación personalizado por servidor. El admin lo copia desde el Dashboard y lo pega en el servidor destino:
 
+```bash
+curl -fsSL "https://tu-servidor/api/agents/bootstrap?secret=XXX" | bash
 ```
+
+El script descargado hace todo automáticamente:
+1. Detecta Python (2.6, 2.7, 3.x)
+2. Descarga el agente como ZIP desde el servidor (sin git)
+3. Escribe el archivo `.env` con la configuración del servidor
+4. Verifica la conectividad con `test.py`
+5. Instala y arranca el servicio (systemd, sysvinit, o crontab según disponibilidad)
+
+Para detalles técnicos del proceso de instalación, ver la documentación del servidor: `docs/agent-installation.md`.
+
+### Configuración manual (desarrollo local)
+
+Para correr el agente en desarrollo, clona el repositorio y configura `.env`:
+
+```bash
 git clone https://github.com/midassoft/sync-logs-agent.git
 cd sync-logs-agent
-
-```
-
-**Paso 2: Configurar el Entorno**
-
-El agente utiliza un archivo `.env` para cargar sus configuraciones. Crea este archivo en la raíz del proyecto copiando el ejemplo:
-
-```
 cp .env.example .env
-
 ```
 
-Ahora, edita el archivo `.env` con los valores correctos para tu entorno:
+Edita el `.env` con los valores de tu entorno:
 
 ```
 # (OBLIGATORIO) Identificador único del servidor desde donde se envían los logs.

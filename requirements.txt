@@ -1,3 +1,11 @@
-python-dotenv==0.5.1
-simplejson==3.11.1
-six>=1.11.0 # Versión que soporta bien Python 2.6 y 3.x
+# All runtime dependencies are vendored in lib/ - pip is NOT required.
+#
+# six (Python 2/3 compatibility) -> lib/six.py
+#
+# python-dotenv and simplejson are listed here for reference only.
+# They are NOT imported anywhere in the agent code:
+#   - config.py uses its own .env parser (no python-dotenv)
+#   - all JSON serialization uses the stdlib json module (no simplejson)
+#
+# If you ever need to re-vendor or update six, run:
+#   pip download six==1.16.0 --no-deps -d lib/
